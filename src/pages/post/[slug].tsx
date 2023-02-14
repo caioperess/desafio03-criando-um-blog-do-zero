@@ -1,6 +1,13 @@
+/* eslint-disable react/no-danger */
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { GetStaticPaths, GetStaticProps } from 'next';
-
-import { getPrismicClient } from '../../services/prismic';
+import Head from 'next/head';
+import Image from 'next/image';
+import { RichText } from 'prismic-dom';
+import { FiCalendar, FiClock, FiUser } from 'react-icons/fi';
+import { getPrismicClient } from '../../../prismicio';
+import Header from '../../components/Header';
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
@@ -26,20 +33,82 @@ interface PostProps {
   post: Post;
 }
 
-// export default function Post() {
-//   // TODO
-// }
+export default function Post({ post }: PostProps): JSX.Element {
+  return (
+    <>
+      <Head>
+        <title>Post | Spacetraveling</title>
+      </Head>
 
-// export const getStaticPaths = async () => {
-//   const prismic = getPrismicClient({});
-//   const posts = await prismic.getByType(TODO);
+      <Header />
 
-//   // TODO
-// };
+      <div className={styles.banner}>
+        <img src={post.data.banner.url} alt="banner" />
+      </div>
 
-// export const getStaticProps = async ({params }) => {
-//   const prismic = getPrismicClient({});
-//   const response = await prismic.getByUID(TODO);
+      <div className={commonStyles.container}>
+        <div className={styles.content}>
+          <div className={styles.header}>
+            <strong>Criando um app CRA do zero</strong>
+            <ul>
+              <li>
+                <FiCalendar /> 15 Mar 2021
+              </li>
+              <li>
+                <FiUser /> 15 Mar 2021
+              </li>
+              <li>
+                <FiClock /> 15 Mar 2021
+              </li>
+            </ul>
+          </div>
 
-//   // TODO
-// };
+          {post.data.content.map(content => (
+            <article key={content.heading}>
+              <h2>{content.heading}</h2>
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: RichText.asHtml(content.body),
+                }}
+              />
+            </article>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  return {
+    paths: [],
+    fallback: 'blocking',
+  };
+};
+
+export const getStaticProps: GetStaticProps = async ({ params }) => {
+  const { slug } = params as any;
+
+  const prismic = getPrismicClient({});
+  const response = await prismic.getByUID('posts', String(slug), {});
+
+  const post: Post = {
+    data: {
+      author: response.data.author,
+      banner: response.data.banner,
+      content: response.data.content,
+      title: response.data.title,
+    },
+    first_publication_date: format(
+      new Date(response.last_publication_date),
+      'dd MMM yyyy',
+      { locale: ptBR }
+    ),
+  };
+
+  return {
+    props: {
+      post,
+    },
+  };
+};
